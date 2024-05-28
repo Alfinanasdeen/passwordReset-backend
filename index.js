@@ -1,31 +1,39 @@
+import dotenv from "dotenv";
+dotenv.config();
+
 import express from "express";
-import mongoose from "mongoose";
 import cors from "cors";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import cookieParser from "cookie-parser";
 import nodemailer from "nodemailer";
 import UserModel from "./models/Users.js";
+import connectToMongoDB from "./database.config.js";
+import { fileURLToPath } from "url";
+import path from "path";
+
+// Determine which environment file to load
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const envPath =
+  process.env.NODE_ENV === "production"
+    ? ".env.production"
+    : ".env.development";
+dotenv.config({ path: path.resolve(__dirname, envPath) });
 
 const app = express();
 app.use(express.json());
 app.use(
   cors({
     //for cookies
-    origin: ["http://localhost:5173"],
+    origin: [process.env.FRONTEND_URL],
     methods: ["GET", "POST"],
     credentials: true,
   })
 );
 app.use(cookieParser());
 
-mongoose.connect('mongodb://127.0.0.1:27017/password_reset_app')
-.then(() => {
-  console.log('mangobd connected successfully');
-})
-.catch(err => {
-  console.error('Failed to connect to MongoDB', err);
-});
+connectToMongoDB()
 
 //Signup
 app.post("/Signup", (req, res) => {
