@@ -22,44 +22,36 @@ const envPath =
 dotenv.config({ path: path.resolve(__dirname, envPath) });
 
 const app = express();
-const hostname = "0.0.0.0";
-const PORT = process.env.PORT || 3000;
-
-connectToMongoDB();
-
-// CORS configuration
-const allowedOrigins = [process.env.FRONTEND_URL, undefined];
+app.use(express.json());
 app.use(
   cors({
-    origin: allowedOrigins,
+    //for cookies
+    origin: [process.env.FRONTEND_URL],
+    methods: ["GET", "POST"],
     credentials: true,
   })
 );
-app.use(express.json());
 app.use(cookieParser());
 
-// Signup route
+connectToMongoDB()
+
+//Signup
 app.post("/api/Signup", (req, res) => {
   const { name, email, password } = req.body;
-
-  // Validate input
-  if (!name || !email || !password) {
-    return res.status(400).json({ message: 'All fields are required' });
-  }
-
   bcrypt
     .hash(password, 10)
     .then((hash) => {
       const user = new UserModel({ name, email, password: hash });
-      return user.save();
+      user
+        .save()
+        .then(() => {
+          res.status(201).json({ message: "User Created Successfully" });
+        })
+        .catch((err) => {
+          res.status(500).json({ message: err.message });
+        });
     })
-    .then(() => {
-      res.status(201).json({ message: "User Created Successfully" });
-    })
-    .catch((err) => {
-      console.error('Error during signup:', err); // Log the full error
-      res.status(500).json({ message: err.message });
-    });
+    .catch((err) => res.json(err));
 });
 
 //Login
@@ -156,6 +148,6 @@ app.post("/api/reset-password/:id/:token", (req, res) => {
   });
 });
 
-app.listen(PORT, () =>
-  console.log(`Server running at http://${hostname}:${PORT}`)
-);
+app.listen(3000, () => {
+  console.log("Server is running Successfully");
+});
