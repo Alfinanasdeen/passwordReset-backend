@@ -22,40 +22,48 @@ const envPath =
 dotenv.config({ path: path.resolve(__dirname, envPath) });
 
 const app = express();
-app.use(express.json());
+const hostname = "0.0.0.0";
+const PORT = process.env.PORT || 3000;
+
+connectToMongoDB();
+
+// CORS configuration
+const allowedOrigins = [process.env.FRONTEND_URL, undefined];
 app.use(
   cors({
-    //for cookies
-    origin: [process.env.FRONTEND_URL],
-    methods: ["GET", "POST"],
+    origin: allowedOrigins,
     credentials: true,
   })
 );
+app.use(express.json());
 app.use(cookieParser());
 
-connectToMongoDB()
-
-//Signup
-app.post("/Signup", (req, res) => {
+// Signup route
+app.post("/api/Signup", (req, res) => {
   const { name, email, password } = req.body;
+
+  // Validate input
+  if (!name || !email || !password) {
+    return res.status(400).json({ message: 'All fields are required' });
+  }
+
   bcrypt
     .hash(password, 10)
     .then((hash) => {
       const user = new UserModel({ name, email, password: hash });
-      user
-        .save()
-        .then(() => {
-          res.status(201).json({ message: "User Created Successfully" });
-        })
-        .catch((err) => {
-          res.status(500).json({ message: err.message });
-        });
+      return user.save();
     })
-    .catch((err) => res.json(err));
+    .then(() => {
+      res.status(201).json({ message: "User Created Successfully" });
+    })
+    .catch((err) => {
+      console.error('Error during signup:', err); // Log the full error
+      res.status(500).json({ message: err.message });
+    });
 });
 
 //Login
-app.post("/", (req, res) => {
+app.post("/api/", (req, res) => {
   const { email, password } = req.body;
   UserModel.findOne({ email: email }).then((user) => {
     if (user) {
@@ -90,7 +98,7 @@ const varifyUser = (req, res, next) => {
     });
   }
 };
-app.get("/Home", varifyUser, (req, res) => {
+app.get("/api/Home", varifyUser, (req, res) => {
   res.json({ Status: "success" });
 });
 
@@ -133,7 +141,7 @@ app.post("/forget-password", (req, res) => {
 });
 
 //Reset Password
-app.post("/reset-password/:id/:token", (req, res) => {
+app.post("/api/reset-password/:id/:token", (req, res) => {
   const { id, token } = req.params;
   const { password } = req.body;
 
@@ -148,6 +156,6 @@ app.post("/reset-password/:id/:token", (req, res) => {
   });
 });
 
-app.listen(3000, () => {
-  console.log("Server is running Successfully");
-});
+app.listen(PORT, () =>
+  console.log(`Server running at http://${hostname}:${PORT}`)
+);
